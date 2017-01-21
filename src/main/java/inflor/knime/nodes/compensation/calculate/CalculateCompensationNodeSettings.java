@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.stream.Collectors;
 
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionContext;
@@ -28,11 +27,13 @@ public class CalculateCompensationNodeSettings {
   static final String KEY_INPUT_DIMENSIONS = "Input Dimensions";
   static final String KEY_OUTPUT_DIMENSIONS = "Output Dimensions";
   static final String KEY_REMOVED_DIMENSIONS = "Ignored Dimensions";
+  private static final String KEY_PARTICLE_KEYS = "Particle Map Keys";
+  private static final String KEY_PARTICLE_VALUES = "Particle Map Values";
   
   String mPath = DEFAULT_PATH;
   
   TheilSenMatrixCalculator compCalculator;
-  private ExecutionContext executionContext;
+  private int j;
     
   public String getPath() {
     return mPath;
@@ -51,15 +52,30 @@ public class CalculateCompensationNodeSettings {
     String[] mapKeys = new String[mCompMap.size()];
     String[] mapValues = new String[mCompMap.size()];
     for (Entry<String, FCSFrame> entry:mCompMap.entrySet()){
-      mapKeys[i] = entry.getKey();
-      mapValues[i] = entry.getValue().getDisplayName();
-      i++;
+     if (entry.getValue()!=null){
+       mapKeys[i] = entry.getKey();
+       mapValues[i] = entry.getValue().getDisplayName();
+     }
+     i++;
     }
+    
+    
+    String[] particleKeys = new String[compCalculator.getParticleTypeMap().size()];
+    String[] particleValues = new String[particleKeys.length];
+    j=0;
+    compCalculator.getParticleTypeMap().entrySet().stream().forEach(e -> {
+      particleKeys[j] = e.getKey();
+      particleValues[j] = e.getValue().toString();
+      j++;
+    });
+    
     settings.addStringArray(KEY_MAP_KEYS, mapKeys);
     settings.addStringArray(KEY_MAP_VALUES, mapValues);
     settings.addStringArray(KEY_INPUT_DIMENSIONS, compCalculator.getInputDims());
     settings.addStringArray(KEY_OUTPUT_DIMENSIONS, compCalculator.getOutputDims());
     settings.addStringArray(KEY_REMOVED_DIMENSIONS, compCalculator.getRemovedDims());
+    settings.addStringArray(KEY_PARTICLE_KEYS, particleKeys);
+    settings.addStringArray(KEY_PARTICLE_VALUES, particleValues);
   }
 
   public void load(NodeSettingsRO settings) throws InvalidSettingsException {
@@ -80,7 +96,18 @@ public class CalculateCompensationNodeSettings {
         List<String> inDimensions = Arrays.asList(settings.getStringArray(KEY_INPUT_DIMENSIONS));
         List<String> outDimensions = Arrays.asList(settings.getStringArray(KEY_OUTPUT_DIMENSIONS));
         
-        compCalculator = new TheilSenMatrixCalculator(dataList, mCompMap, inDimensions, outDimensions);
+        Map<String, ParticleType> loadedMap = new HashMap<>();
+        String[] loadedKeys = settings.getStringArray(KEY_PARTICLE_KEYS);
+        String[] loadedValues = settings.getStringArray(KEY_PARTICLE_VALUES);
+        for (int i=0;i<loadedKeys.length;i++){
+          if (loadedValues[i].equals(ParticleType.BEADS.toString())){
+            loadedMap.put(loadedKeys[i], ParticleType.BEADS);
+          } else { 
+            loadedMap.put(loadedKeys[i], ParticleType.CELLS);
+          }
+        }
+        
+        compCalculator = new TheilSenMatrixCalculator(dataList, mCompMap, inDimensions, outDimensions, loadedMap);
       } else {
         compCalculator = new TheilSenMatrixCalculator(dataList);
       }
@@ -93,7 +120,7 @@ public class CalculateCompensationNodeSettings {
     compCalculator.removeCompDimension(dimension);
   }
   
-  public void modifyDimension(String dimension, String newValue) {
+  public void updateDimensionMap(String dimension, String newValue) {
     compCalculator.overrideMapping(dimension, newValue);
   }
 
@@ -116,7 +143,7 @@ public class CalculateCompensationNodeSettings {
   public String[] getFormattedOutDims() {
     String[] formattedDimensionNames = new String[getOutDims().length];
     for (int i=0;i<getInDims().length;i++){
-      formattedDimensionNames[i] = "[" + getOutDims()[i] + "]";
+      formattedDimensionNames[i] = FCSUtilities.formatCompStainName(getOutDims()[i]);
     }
     return formattedDimensionNames;
   }
@@ -129,7 +156,15 @@ public class CalculateCompensationNodeSettings {
     compCalculator.setContext(exec);
     }
 
-  public double[][] calculate() throws CanceledExecutionException {
+  public double[][][] calculate() throws CanceledExecutionException {
     return compCalculator.calculate();
+  }
+
+  public ParticleType getParticleType(String key) {
+    return compCalculator.getParticleType(key);
+  }
+
+  public void udpateParticleType(String dimension, ParticleType newValue) {
+    compCalculator.getParticleTypeMap().put(dimension, newValue);
   }
 }

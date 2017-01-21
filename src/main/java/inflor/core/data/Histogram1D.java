@@ -52,7 +52,7 @@ public class Histogram1D {
   private void createMask() {
     mask = new BitSet(y.length);
     for (int i = 0; i < y.length; i++) {
-      if (y[i] != 0) {
+      if (y[i] > Double.MIN_NORMAL || y[i] < -Double.MIN_NORMAL) {
         mask.set(i);
       }
     }

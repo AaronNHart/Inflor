@@ -43,7 +43,8 @@ public class FCSDimension extends DomainObject implements Comparable <FCSDimensi
     ampTypef2 = pneF2;
     range = pnr;
     this.data = new double[size];
-    if (ampTypef1 == 0 && ampTypef2 == 0) {
+    if (ampTypef1 >= -Double.MIN_NORMAL && ampTypef1 <= Double.MIN_NORMAL &&
+        ampTypef2 >= -Double.MIN_NORMAL && ampTypef2 <= Double.MIN_NORMAL) {
       this.preferredTransform = new BoundDisplayTransform(ampTypef1, range);
     } else {
       this.preferredTransform = new LogicleTransform();

@@ -35,6 +35,28 @@ public class FCSFramePortObject extends FileStorePortObject {
 
   private static final NodeLogger logger = NodeLogger.getLogger(FCSFramePortObject.class);
 
+  public static final PortType TYPE =
+      PortTypeRegistry.getInstance().getPortType(FCSFramePortObject.class);
+
+  private static final String COLUMNS_NAME = "column_names";
+  private static final String MODEL_NAME = "column_store_model";
+  
+  private FCSFramePortSpec mSpec;
+  private WeakReference<FCSFrameContent> mFCSFrame;
+  private List<String> mDimensionNames;
+  
+  public FCSFramePortObject() {
+    // to be used in conjunction only with .load().
+  }
+
+  public FCSFramePortObject(FCSFramePortSpec spec, FCSFrame vectorStore,
+      FileStore fileStore) {
+    super(Lists.newArrayList(fileStore));
+    mSpec = spec;
+    final FCSFrameContent content = new FCSFrameContent(vectorStore);
+    mFCSFrame = new WeakReference<>(content);
+    mDimensionNames = vectorStore.getDimensionNames();
+  }
   
   public static final class Serializer extends PortObjectSerializer<FCSFramePortObject> {
 
@@ -53,12 +75,6 @@ public class FCSFramePortObject extends FileStorePortObject {
       portObject.save(out);
     }
   }
-
-  public static final PortType TYPE =
-      PortTypeRegistry.getInstance().getPortType(FCSFramePortObject.class);
-
-  private static final String COLUMNS_NAME = "column_names";
-  private static final String MODEL_NAME = "column_store_model";
 
   public static FCSFramePortObject createPortObject(final FCSFramePortSpec spec,
       final FCSFrame columnStore, final FileStore fileStore) {
@@ -80,25 +96,6 @@ public class FCSFramePortObject extends FileStorePortObject {
     }
   }
 
-  private FCSFramePortSpec m_spec;
-
-  private WeakReference<FCSFrameContent> m_columnStore;
-
-  private List<String> m_columnNames;
-
-  public FCSFramePortObject() {
-    // to be used in conjunction only with .load().
-  }
-
-  public FCSFramePortObject(FCSFramePortSpec spec, FCSFrame vectorStore,
-      FileStore fileStore) {
-    super(Lists.newArrayList(fileStore));
-    m_spec = spec;
-    final FCSFrameContent content = new FCSFrameContent(vectorStore);
-    m_columnStore = new WeakReference<>(content);
-    m_columnNames = vectorStore.getDimensionNames();
-  }
-
   private FCSFrame deserialize() throws IOException {
     final File file = getFileStore(0).getFile();
     FCSFrame vectorStore;
@@ -113,7 +110,7 @@ public class FCSFramePortObject extends FileStorePortObject {
   }
 
   public FCSFrame getColumnStore() {
-    final FCSFrameContent content = m_columnStore.get();
+    final FCSFrameContent content = mFCSFrame.get();
     FCSFrame cs = null;
     if (content == null) {
       try {
@@ -122,40 +119,38 @@ public class FCSFramePortObject extends FileStorePortObject {
         throw new IllegalStateException("Error in deserialization.", e);
       }
       final FCSFrameContent newContent = new FCSFrameContent(cs);
-      m_columnStore = new WeakReference<>(newContent);
+      mFCSFrame = new WeakReference<>(newContent);
     }
     return cs;
   }
 
   public Map<String, String> getHeader() {
-    return m_spec.keywords;
+    return mSpec.getKeywords();
   }
 
   public List<String> getParameterList() {
-    return m_columnNames;
+    return mDimensionNames;
   }
 
   @Override
   public PortObjectSpec getSpec() {
-    return m_spec;
+    return mSpec;
   }
 
   @Override
   public String getSummary() {
-    final Integer pCount = m_columnNames.size();
-    final Integer rowCount = m_columnStore.get().getColumnStore().getRowCount();
-    final String message =
-        "vector set containing " + pCount + " parameters and " + rowCount + " rows ";
-    return message;
+    final Integer pCount = mDimensionNames.size();
+    final Integer rowCount = mFCSFrame.get().getColumnStore().getRowCount();
+    return "vector set containing " + pCount + " parameters and " + rowCount + " rows ";
   }
 
   private void load(final PortObjectZipInputStream in, final PortObjectSpec spec)
       throws IOException, CanceledExecutionException {
-    m_spec = (FCSFramePortSpec) spec;
-    m_columnStore = new WeakReference<>(null);
+    mSpec = (FCSFramePortSpec) spec;
+    mFCSFrame = new WeakReference<>(null);
     final ModelContentRO contentRO = ModelContent.loadFromXML(in);
     try {
-      m_columnNames = Arrays.asList(contentRO.getStringArray(COLUMNS_NAME));
+      mDimensionNames = Arrays.asList(contentRO.getStringArray(COLUMNS_NAME));
     } catch (final InvalidSettingsException ise) {
       final IOException ioe =
           new IOException("Unable to restore meta information: " + ise.getMessage());
@@ -166,14 +161,14 @@ public class FCSFramePortObject extends FileStorePortObject {
 
   public void save(PortObjectZipOutputStream out) throws IOException {
     final ModelContent content = new ModelContent(MODEL_NAME);
-    content.addStringArray(COLUMNS_NAME, m_columnNames.toArray(new String[m_columnNames.size()]));
+    content.addStringArray(COLUMNS_NAME, mDimensionNames.toArray(new String[mDimensionNames.size()]));
     content.saveToXML(out);
 
   }
 
   public FCSFrameFileStoreDataCell toTableCell(FileStore fs) {
     getColumnStore();
-    return m_columnStore.get().toColumnStoreCell(fs);
+    return mFCSFrame.get().toColumnStoreCell(fs);
   }
 
   @Override

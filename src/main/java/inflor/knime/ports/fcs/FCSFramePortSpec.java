@@ -3,6 +3,7 @@ package main.java.inflor.knime.ports.fcs;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.zip.ZipEntry;
 
 import javax.swing.JComponent;
@@ -35,11 +36,18 @@ public class FCSFramePortSpec implements PortObjectSpec {
 
   private static final NodeLogger LOGGER = NodeLogger.getLogger(FCSFramePortSpec.class);
 
-  private final static String CFG_SPEC = "spec";
-  private final static String CFG_KEYS = "keys";
-  private final static String CFG_VALUES = "values";
-  private final static String CFG_COLUMN_NAMES = "vector names";
-  private final static String CFG_RowCount = "row count";
+  private static final String CFG_SPEC = "spec";
+  private static final String CFG_KEYS = "keys";
+  private static final String CFG_VALUES = "values";
+  private static final String CFG_COLUMN_NAMES = "vector names";
+  private static final String CFG_ROW_COUNT = "row count";
+  
+
+  private Map<String, String> keywords;
+  private String[] columnNames;
+
+  private int rowCount;
+
 
   public static FCSFramePortSpec load(PortObjectSpecZipInputStream in) {
     ModelContentRO model = null;
@@ -58,7 +66,7 @@ public class FCSFramePortSpec implements PortObjectSpec {
       keys = model.getStringArray(CFG_KEYS);
       values = model.getStringArray(CFG_VALUES);
       newVectorNames = model.getStringArray(CFG_COLUMN_NAMES);
-      newRowCount = model.getInt(CFG_RowCount);
+      newRowCount = model.getInt(CFG_ROW_COUNT);
     } catch (final InvalidSettingsException ise) {
       LOGGER.error("Internal error: Could not load settings", ise);
     }
@@ -70,11 +78,6 @@ public class FCSFramePortSpec implements PortObjectSpec {
     return new FCSFramePortSpec(newKeywords, newVectorNames, newRowCount);
 
   }
-
-  public Map<String, String> keywords;
-  public String[] columnNames;
-
-  private int rowCount;
 
   public FCSFramePortSpec() {
     // no op, use with .load
@@ -108,9 +111,9 @@ public class FCSFramePortSpec implements PortObjectSpec {
     final String[] keys = new String[keywords.keySet().size()];
     final String[] values = new String[keywords.keySet().size()];
     int i = 0;
-    for (final String key : keywords.keySet()) {
-      keys[i] = key;
-      values[i] = keywords.get(key);
+    for (Entry<String, String> entry : keywords.entrySet()) {
+      keys[i] = entry.getKey();
+      values[i] = entry.getValue();
       i++;
     }
     // Create model and add values.
@@ -118,7 +121,7 @@ public class FCSFramePortSpec implements PortObjectSpec {
     modelOut.addStringArray(CFG_KEYS, keys);
     modelOut.addStringArray(CFG_VALUES, values);
     modelOut.addStringArray(CFG_COLUMN_NAMES, columnNames);
-    modelOut.addInt(CFG_RowCount, rowCount);
+    modelOut.addInt(CFG_ROW_COUNT, rowCount);
     try {
       out.putNextEntry(new ZipEntry(CFG_SPEC));
       modelOut.saveToXML(out);

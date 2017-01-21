@@ -19,6 +19,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 
 import org.knime.core.data.DataTableSpec;
@@ -50,12 +51,13 @@ public class CalculateCompensationNodeDialog extends NodeDialogPane {
   private static final int BUTTON_COLUMN_INDEX = 0;
   private static final int DIMENSION_COLUMN_INDEX = 1;
   private static final int CONTROL_FILE_COLUMN_INDEX = 2;
+  private static final int PARTICLE_TYPE_COLUMN_INDEX = 3;
 
   private static final NodeLogger LOGGER =
       NodeLogger.getLogger(CalculateCompensationNodeDialog.class);
 
   private static final Object[] COMP_MAP_TABLE_COLUMN_NAMES =
-      new String[] {"Marker", "Compensation Control", "Remove"};
+      new String[] {"Remove", "Marker", "Compensation Control", "Type"};
 
   private CalculateCompensationNodeSettings mSettings;
 
@@ -115,6 +117,7 @@ public class CalculateCompensationNodeDialog extends NodeDialogPane {
         mSettings.load(settings);
         updateCompensationMapPanel();
       } catch (InvalidSettingsException e) {
+        LOGGER.error("Failed to load Settings.", e);
         throw new NotConfigurableException("Failed to load Settings.", e);
       }
 
@@ -145,11 +148,27 @@ public class CalculateCompensationNodeDialog extends NodeDialogPane {
       if (modelRow >= 0) {
         String dimension = (String) table.getModel().getValueAt(modelRow, DIMENSION_COLUMN_INDEX);
         String newValue = (String) table.getModel().getValueAt(modelRow, CONTROL_FILE_COLUMN_INDEX);
-        mSettings.modifyDimension(dimension, newValue);
+        mSettings.updateDimensionMap(dimension, newValue);
         updateCompensationMapPanel();
       }
     });
     table.getColumnModel().getColumn(2).setCellEditor(new DefaultCellEditor(fcsFrameComboBox));
+    
+    //particleType combo box.
+    JComboBox<ParticleType> particleTypeComboBox = new JComboBox<>();
+    for (ParticleType pt: ParticleType.values()){
+      particleTypeComboBox.addItem(pt);
+    }
+    particleTypeComboBox.addActionListener(e -> {
+      int modelRow = table.getSelectedRow();
+      if (modelRow >= 0) {
+        String dimension = (String) table.getModel().getValueAt(modelRow, DIMENSION_COLUMN_INDEX);
+        ParticleType newValue = (ParticleType) table.getModel().getValueAt(modelRow, PARTICLE_TYPE_COLUMN_INDEX);
+        mSettings.udpateParticleType(dimension, newValue);
+        updateCompensationMapPanel();
+      }
+    });
+    table.getColumnModel().getColumn(3).setCellEditor(new DefaultCellEditor(particleTypeComboBox));
 
     // Create button column.
     @SuppressWarnings("serial")
@@ -183,10 +202,14 @@ public class CalculateCompensationNodeDialog extends NodeDialogPane {
     Object[][] table = new Object[compMap.size()][3];
     int i = 0;
     for (Entry<String, FCSFrame> entry : compMap.entrySet()) {
-      Object[] tableRow = new Object[3];
+      Object[] tableRow = new Object[4];
       tableRow[BUTTON_COLUMN_INDEX] = "remove";
       tableRow[DIMENSION_COLUMN_INDEX] = entry.getKey();
-      tableRow[CONTROL_FILE_COLUMN_INDEX] = entry.getValue().getDisplayName();
+      if (entry.getValue()!=null){
+        tableRow[CONTROL_FILE_COLUMN_INDEX] = entry.getValue().getDisplayName();
+      } else {
+        tableRow[PARTICLE_TYPE_COLUMN_INDEX] = mSettings.getParticleType(entry.getKey());
+      }
       table[i] = tableRow;
       i++;
     }

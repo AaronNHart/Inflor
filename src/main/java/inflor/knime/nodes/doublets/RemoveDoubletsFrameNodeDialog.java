@@ -41,16 +41,16 @@ public class RemoveDoubletsFrameNodeDialog extends DefaultNodeSettingsPane {
     defaultChoices.add("None");
     // Area Selector
     final SettingsModelString m_areaStringSetting =
-        new SettingsModelString(RemoveDoubletsFrameNodeModel.CFGKEY_AreaColumn,
-            RemoveDoubletsFrameNodeModel.DEFAULT_AreaColumn);
+        new SettingsModelString(RemoveDoubletsFrameNodeModel.KEY_AREA_COLUMN,
+            RemoveDoubletsFrameNodeModel.DEFAULT_AREA_COLUMN);
     areaComponent =
         new DialogComponentStringSelection(m_areaStringSetting, AREA_LABEL, defaultChoices);
     addDialogComponent(areaComponent);
 
     // height Selector
     final SettingsModelString m_heightStringSetting =
-        new SettingsModelString(RemoveDoubletsFrameNodeModel.CFGKEY_HeightColumn,
-            RemoveDoubletsFrameNodeModel.DEFAULT_HeightColumn);
+        new SettingsModelString(RemoveDoubletsFrameNodeModel.KEY_HEIGHT_COLUMN,
+            RemoveDoubletsFrameNodeModel.DEFAULT_HEIGHT_COLUMN);
     heightComponent =
         new DialogComponentStringSelection(m_heightStringSetting, HEIGHT_LABEL, defaultChoices);
     addDialogComponent(heightComponent);
@@ -62,7 +62,7 @@ public class RemoveDoubletsFrameNodeDialog extends DefaultNodeSettingsPane {
   public void loadAdditionalSettingsFrom(final NodeSettingsRO settings,
       final PortObjectSpec[] specs) throws NotConfigurableException {
     final FCSFramePortSpec spec = (FCSFramePortSpec) specs[0];
-    final String[] vectorNames = spec.columnNames;
+    final String[] vectorNames = spec.getColumnNames();
     final SingletsModel model = new SingletsModel(vectorNames);
 
     final ArrayList<String> areaChoices = model.findColumns(vectorNames, PuleProperties.AREA);

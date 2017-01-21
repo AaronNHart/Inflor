@@ -34,10 +34,10 @@ import main.java.inflor.knime.ports.fcs.FCSFramePortSpec;
 public class DownsampleNodeModel extends NodeModel {
 
   // Downsample size
-  static final String CFGKEY_Size = "size";
-  static final int DEFAULT_Size = 5000;
+  static final String KEY_SIZE = "size";
+  static final int DEFAULT_SIZE = 5000;
 
-  private final SettingsModelInteger m_Size = new SettingsModelInteger(CFGKEY_Size, DEFAULT_Size);
+  private final SettingsModelInteger mSize = new SettingsModelInteger(KEY_SIZE, DEFAULT_SIZE);
 
   /**
    * Constructor for the node model.
@@ -57,7 +57,7 @@ public class DownsampleNodeModel extends NodeModel {
     final FCSFramePortSpec portSpec = (FCSFramePortSpec) inSpecs[0];
 
     final FCSFramePortSpec outSpec =
-        new FCSFramePortSpec(portSpec.keywords, portSpec.columnNames, portSpec.getRowCount());
+        new FCSFramePortSpec(portSpec.getKeywords(), portSpec.getColumnNames(), portSpec.getRowCount());
     return new FCSFramePortSpec[] {outSpec};
   }
 
@@ -71,7 +71,7 @@ public class DownsampleNodeModel extends NodeModel {
     final FCSFramePortSpec inSpec = (FCSFramePortSpec) inPort.getSpec();
     final FCSFrame inColumnStore = inPort.getColumnStore();
     final int inSize = inColumnStore.getRowCount();
-    final int downSize = m_Size.getIntValue();
+    final int downSize = mSize.getIntValue();
     final int finalSize = downSize >= inSize ? downSize : inSize;
     FCSFrame outStore = new FCSFrame(inColumnStore.getKeywords(), finalSize);
     if (downSize >= inSize) {
@@ -90,10 +90,11 @@ public class DownsampleNodeModel extends NodeModel {
     return new FCSFramePortObject[] {outPort};
   }
 
-  private FCSFramePortSpec getSpec(FCSFramePortSpec inSpec) {
-    final FCSFramePortSpec outSpec =
-        new FCSFramePortSpec(inSpec.keywords, inSpec.columnNames, inSpec.getRowCount());
-    return outSpec;
+  private FCSFramePortSpec getSpec(FCSFramePortSpec inSpec) {        
+    return new FCSFramePortSpec(
+        inSpec.getKeywords(), 
+        inSpec.getColumnNames(), 
+        inSpec.getRowCount());
   }
 
   /**
@@ -101,9 +102,7 @@ public class DownsampleNodeModel extends NodeModel {
    */
   @Override
   protected void loadInternals(final File internDir, final ExecutionMonitor exec)
-      throws IOException, CanceledExecutionException {
-
-  }
+      throws IOException, CanceledExecutionException {/*noop*/}
 
   /**
    * {@inheritDoc}
@@ -112,27 +111,21 @@ public class DownsampleNodeModel extends NodeModel {
   protected void loadValidatedSettingsFrom(final NodeSettingsRO settings)
       throws InvalidSettingsException {
 
-    m_Size.loadSettingsFrom(settings);
+    mSize.loadSettingsFrom(settings);
   }
 
   /**
    * {@inheritDoc}
    */
   @Override
-  protected void reset() {
-    // TODO Code executed on reset.
-    // Models build during execute are cleared here.
-    // Also data handled in load/saveInternals will be erased here.
-  }
+  protected void reset() {/*noop*/}
 
   /**
    * {@inheritDoc}
    */
   @Override
   protected void saveInternals(final File internDir, final ExecutionMonitor exec)
-      throws IOException, CanceledExecutionException {
-
-  }
+      throws IOException, CanceledExecutionException {/*noop*/}
 
   /**
    * {@inheritDoc}
@@ -140,7 +133,7 @@ public class DownsampleNodeModel extends NodeModel {
   @Override
   protected void saveSettingsTo(final NodeSettingsWO settings) {
 
-    m_Size.saveSettingsTo(settings);
+    mSize.saveSettingsTo(settings);
 
   }
 
@@ -149,8 +142,8 @@ public class DownsampleNodeModel extends NodeModel {
    */
   @Override
   protected void validateSettings(final NodeSettingsRO settings) throws InvalidSettingsException {
-    if (m_Size.getIntValue() >= 1) {
-      m_Size.validateSettings(settings);
+    if (mSize.getIntValue() >= 1) {
+      mSize.validateSettings(settings);
     } else {
       throw new InvalidSettingsException("Downsample size must be greater than 1");
     }

@@ -300,7 +300,11 @@ public class FCSFrame extends DomainObject implements Comparable<String> {
     int i = 0;
     for (Subset s: subsets) {
       boolean value = s.getMembers().get(index);
-      row[i] = Boolean.toString(value);
+      if (value){
+        row[i] = s.getLabel() + "+";
+      } else {
+        row[i] = s.getLabel() + "-";
+      }
       i++;
     }
     return row;

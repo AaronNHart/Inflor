@@ -34,16 +34,15 @@ import main.java.inflor.knime.ports.fcs.FCSFramePortSpec;
 public class RemoveDoubletsFrameNodeModel extends NodeModel {
 
   // Area parameter
-  static final String CFGKEY_AreaColumn = "Area Column";
-  static final String DEFAULT_AreaColumn = null;
+  static final String KEY_AREA_COLUMN = "Area Column";
+  static final String DEFAULT_AREA_COLUMN = null;
   // Height parameter
-  static final String CFGKEY_HeightColumn = "Height Column";
-
-  static final String DEFAULT_HeightColumn = null;
-  private final SettingsModelString m_AreaColumn =
-      new SettingsModelString(CFGKEY_AreaColumn, DEFAULT_AreaColumn);
-  private final SettingsModelString m_HeightColumn =
-      new SettingsModelString(CFGKEY_HeightColumn, DEFAULT_HeightColumn);
+  static final String KEY_HEIGHT_COLUMN = "Height Column";
+  static final String DEFAULT_HEIGHT_COLUMN = null;
+  private final SettingsModelString mAreaColumn =
+      new SettingsModelString(KEY_AREA_COLUMN, DEFAULT_AREA_COLUMN);
+  private final SettingsModelString mHeightColumn =
+      new SettingsModelString(KEY_HEIGHT_COLUMN, DEFAULT_HEIGHT_COLUMN);
 
   /**
    * Constructor for the node model.
@@ -79,16 +78,16 @@ public class RemoveDoubletsFrameNodeModel extends NodeModel {
     final FCSFrame inColumnStore = inPort.getColumnStore();
 
     // Do the modeling
-    final SingletsModel model = new SingletsModel(inSpec.columnNames);
-    final double[] area = inColumnStore.getDimension(m_AreaColumn.getStringValue()).getData();
-    final double[] height = inColumnStore.getDimension(m_HeightColumn.getStringValue()).getData();
+    final SingletsModel model = new SingletsModel(inSpec.getColumnNames());
+    final double[] area = inColumnStore.getDimension(mAreaColumn.getStringValue()).getData();
+    final double[] height = inColumnStore.getDimension(mHeightColumn.getStringValue()).getData();
     final double[] ratio = model.buildModel(area, height);
     final BitSet mask = model.scoreModel(ratio);
 
     // Create the output
     final FCSFrame outStore = FCSUtilities.filterColumnStore(mask, inColumnStore);
     final FCSFramePortSpec outSpec =
-        new FCSFramePortSpec(inSpec.keywords, inSpec.columnNames, outStore.getRowCount());
+        new FCSFramePortSpec(inSpec.getKeywords(), inSpec.getColumnNames(), outStore.getRowCount());
     final FileStoreFactory fileStoreFactory = FileStoreFactory.createWorkflowFileStoreFactory(exec);
     final FileStore filestore = fileStoreFactory.createFileStore("column.store");
     final FCSFramePortObject outPort =
@@ -96,10 +95,11 @@ public class RemoveDoubletsFrameNodeModel extends NodeModel {
     return new PortObject[] {outPort};
   }
 
-  private FCSFramePortSpec getSpec(FCSFramePortSpec inSpec) {
-    final FCSFramePortSpec outSpec =
-        new FCSFramePortSpec(inSpec.keywords, inSpec.columnNames, inSpec.getRowCount());
-    return outSpec;
+  private FCSFramePortSpec getSpec(FCSFramePortSpec inSpec) {       
+    return new FCSFramePortSpec(
+        inSpec.getKeywords(), 
+        inSpec.getColumnNames(), 
+        inSpec.getRowCount());
   }
 
   /**
@@ -117,8 +117,8 @@ public class RemoveDoubletsFrameNodeModel extends NodeModel {
   @Override
   protected void loadValidatedSettingsFrom(final NodeSettingsRO settings)
       throws InvalidSettingsException {
-    m_AreaColumn.setStringValue(settings.getString(CFGKEY_AreaColumn));
-    m_HeightColumn.setStringValue(settings.getString(CFGKEY_HeightColumn));
+    mAreaColumn.setStringValue(settings.getString(KEY_AREA_COLUMN));
+    mHeightColumn.setStringValue(settings.getString(KEY_HEIGHT_COLUMN));
 
   }
 
@@ -144,8 +144,8 @@ public class RemoveDoubletsFrameNodeModel extends NodeModel {
    */
   @Override
   protected void saveSettingsTo(final NodeSettingsWO settings) {
-    settings.addString(CFGKEY_AreaColumn, m_AreaColumn.getStringValue());
-    settings.addString(CFGKEY_HeightColumn, m_HeightColumn.getStringValue());
+    settings.addString(KEY_AREA_COLUMN, mAreaColumn.getStringValue());
+    settings.addString(KEY_HEIGHT_COLUMN, mHeightColumn.getStringValue());
 
   }
 

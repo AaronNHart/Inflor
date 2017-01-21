@@ -93,7 +93,7 @@ public class Histogram2D {
   public BitSet getNonEmptyBins() {
     BitSet bits = new BitSet(zValues.length);
     for (int i = 0; i < zValues.length; i++) {
-      if (zValues[i] != 0) {
+      if (zValues[i] >= Double.MIN_NORMAL || zValues[i] < -Double.MIN_NORMAL) {
         bits.set(i);
       }
     }

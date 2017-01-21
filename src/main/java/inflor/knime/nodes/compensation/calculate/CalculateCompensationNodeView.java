@@ -1,7 +1,6 @@
 package main.java.inflor.knime.nodes.compensation.calculate;
 
 import org.knime.core.node.NodeView;
-import org.knime.core.node.defaultnodesettings.SettingsModelString;
 
 /**
  * <code>NodeView</code> for the "CalculateCompensation" Node.
@@ -14,8 +13,6 @@ public class CalculateCompensationNodeView extends NodeView<CalculateCompensatio
   // Folder containing FCS Files.
   static final String CFGKEY_PATH = "Path";
   static final String DEFAULT_PATH = "None";
-
-  private final SettingsModelString mPath = new SettingsModelString(CFGKEY_PATH, DEFAULT_PATH);
   
     /**
      * Creates a new view.
@@ -24,7 +21,6 @@ public class CalculateCompensationNodeView extends NodeView<CalculateCompensatio
      */
     protected CalculateCompensationNodeView(final CalculateCompensationNodeModel nodeModel) {
         super(nodeModel);
-
         // TODO instantiate the components of the view here.
 
     }
@@ -34,15 +30,7 @@ public class CalculateCompensationNodeView extends NodeView<CalculateCompensatio
      */
     @Override
     protected void modelChanged() {
-
         // TODO retrieve the new model from your nodemodel and 
-        // update the view.
-        CalculateCompensationNodeModel nodeModel = 
-            (CalculateCompensationNodeModel)getNodeModel();
-        assert nodeModel != null;
-        
-        // be aware of a possibly not executed nodeModel! The data you retrieve
-        // from your nodemodel could be null, emtpy, or invalid in any kind.
         
     }
 
@@ -51,7 +39,6 @@ public class CalculateCompensationNodeView extends NodeView<CalculateCompensatio
      */
     @Override
     protected void onClose() {
-    
         // TODO things to do when closing the view
     }
 
@@ -60,7 +47,6 @@ public class CalculateCompensationNodeView extends NodeView<CalculateCompensatio
      */
     @Override
     protected void onOpen() {
-
         // TODO things to do when opening the view
     }
 

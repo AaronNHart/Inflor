@@ -38,14 +38,15 @@ import main.java.inflor.core.ui.LookAndFeel;
 
 public class ChartUtils {
 
+  private ChartUtils(){}
+  
   public static Point2D getPlotCoordinates(MouseEvent e, FCSChartPanel panel) {
     Point2D p = panel.translateScreenToJava2D(e.getPoint());
     Rectangle2D plotArea = panel.getScreenDataArea();
     XYPlot plot = panel.getChart().getXYPlot();
     double x = plot.getDomainAxis().java2DToValue(p.getX(), plotArea, plot.getDomainAxisEdge());
     double y = plot.getRangeAxis().java2DToValue(p.getY(), plotArea, plot.getRangeAxisEdge());
-    Point2D vertex = new Point2D.Double(x, y);
-    return vertex;
+    return new Point2D.Double(x, y);
   }
 
   public static AbstractGate createGate(XYGateAnnotation annotation) {
@@ -91,25 +92,23 @@ public class ChartUtils {
   public static XYGateAnnotation createAnnotation(AbstractGate gate) {
     if (gate instanceof RangeGate){
       RangeGate rangeGate = (RangeGate)gate;
-      XYGateAnnotation newAnnotation = new RectangleGateAnnotation(rangeGate.getLabel(), 
-                                                               rangeGate.getDomainAxisName(), 
-                                                               rangeGate.getRangeAxisName(), 
-                                                               rangeGate.getMinValue(0), rangeGate.getMinValue(1), 
-                                                               rangeGate.getMaxValue(0), rangeGate.getMaxValue(1),  
-                                                               LookAndFeel.DEFAULT_STROKE, 
-                                                               LookAndFeel.DEFAULT_GATE_COLOR);
-      return newAnnotation;
+      return new RectangleGateAnnotation(rangeGate.getLabel(), 
+          rangeGate.getDomainAxisName(), 
+          rangeGate.getRangeAxisName(), 
+          rangeGate.getMinValue(0), rangeGate.getMinValue(1), 
+          rangeGate.getMaxValue(0), rangeGate.getMaxValue(1),  
+          LookAndFeel.DEFAULT_STROKE, 
+          LookAndFeel.DEFAULT_GATE_COLOR);
     } else if(gate instanceof PolygonGate){
       PolygonGate polyGate = (PolygonGate)gate;
-      XYGateAnnotation polyAnn = new PolygonGateAnnotation(polyGate.getLabel(), 
-                                                           polyGate.getDomainAxisName(), 
-                                                           polyGate.getRangeAxisName(), 
-                                                           polyGate.getFlatVertexArray(), 
-                                                           LookAndFeel.DEFAULT_STROKE, 
-                                                           LookAndFeel.DEFAULT_GATE_COLOR);
-      return polyAnn;
+      return new PolygonGateAnnotation(polyGate.getLabel(), 
+          polyGate.getDomainAxisName(), 
+          polyGate.getRangeAxisName(), 
+          polyGate.getFlatVertexArray(), 
+          LookAndFeel.DEFAULT_STROKE, 
+          LookAndFeel.DEFAULT_GATE_COLOR);
     } else{
-      throw new RuntimeException("unable to create gate annotation.");
+      throw new IllegalArgumentException("unable to create gate annotation.");
     }
   }
 

@@ -102,7 +102,7 @@ public class LogicleTransform extends AbstractTransform implements Serializable 
       newValue = value;
     }
 
-    if (newValue == logicle.T) {
+    if (newValue >= logicle.T) {
       return 1;
     }
     return logicle.scale(newValue);
@@ -110,7 +110,7 @@ public class LogicleTransform extends AbstractTransform implements Serializable 
 
   @Override
   public double inverse(double value) {
-    if (value == 1) {
+    if (value >= 1) {
       return logicle.T;
     } else {
       return logicle.inverse(value);

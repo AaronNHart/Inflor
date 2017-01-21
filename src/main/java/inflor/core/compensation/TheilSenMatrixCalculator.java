@@ -11,6 +11,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import org.apache.commons.math3.stat.descriptive.rank.Median;
 import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 import org.knime.core.node.CanceledExecutionException;
 import org.knime.core.node.ExecutionContext;
@@ -23,8 +24,7 @@ import main.java.inflor.core.fcs.ParameterTypes;
 import main.java.inflor.core.gates.RangeGate;
 import main.java.inflor.core.utils.BitSetUtils;
 import main.java.inflor.core.utils.FCSUtilities;
-import main.java.inflor.knime.nodes.statistics.StatSpec;
-import main.java.inflor.knime.nodes.statistics.StatType;
+import main.java.inflor.knime.nodes.compensation.calculate.ParticleType;
 
 public class TheilSenMatrixCalculator {
   
@@ -36,11 +36,11 @@ public class TheilSenMatrixCalculator {
   private static final String MSG_MAPPED_FILE_NOT_FOUND = "Mapped file not found in supplied data list";
   private static final String MSG_EMPTY_COMP_LIST = "Input list should contain at least 1 FCSFrame";
 
-  private static final Logger LOGGER = Logger.getLogger( TheilSenMatrixCalculator.class.getName() );
+  private static final Logger LOGGER = Logger.getLogger(TheilSenMatrixCalculator.class.getName());
+  private static final String KEY_US_BEADS = "Unstained Beads";
+  private static final String KEY_US_CELLS = "Unstained Cells";
+  private static final ParticleType DEFAULT_PARTICLE_TYPE = ParticleType.BEADS;
 
-  private static final String SUBSET_NAME_SCATTER = "INFLOR_COMP_SCATTER";
-
-  
   private Map<String, FCSFrame> dataMap;
   private boolean isValid = false;
   private List<String> status = new ArrayList<>();
@@ -49,6 +49,7 @@ public class TheilSenMatrixCalculator {
   private ArrayList<String> ignoredDimensions = new ArrayList<>();
   private List<FCSFrame> dataList;
   private ExecutionContext exec;
+  private Map<String, ParticleType> particleTypeMap = new HashMap<>();
   
   public TheilSenMatrixCalculator(List<FCSFrame> newDataList){
     dataList = newDataList;
@@ -62,6 +63,7 @@ public class TheilSenMatrixCalculator {
       
       inDimensions = fluorescentDims;
       outDimensions = fluorescentDims;
+            
       dataMap = initializeDataSet(fluorescentDims, dataList);
       isValid = validate();
     } else {
@@ -69,7 +71,7 @@ public class TheilSenMatrixCalculator {
     }
   }
   
-  public TheilSenMatrixCalculator(List<FCSFrame> newDataList, Map<String, String> compensationMap, List<String> inDims, List<String> outDims) {
+  public TheilSenMatrixCalculator(List<FCSFrame> newDataList, Map<String, String> compensationMap, List<String> inDims, List<String> outDims, Map<String, ParticleType> particleTypeMap) {
     dataList = newDataList;
 
     inDimensions = inDims
@@ -91,6 +93,9 @@ public class TheilSenMatrixCalculator {
         throw new IllegalArgumentException(MSG_MAPPED_FILE_NOT_FOUND);
       }
     }
+    
+    this.particleTypeMap = particleTypeMap;
+    
     isValid = validate();    
   }
 
@@ -104,25 +109,32 @@ public class TheilSenMatrixCalculator {
     status.clear();
     boolean valid = true;
     for (Entry<String, FCSFrame> e: dataSet2.entrySet()){
-      //Check to see that the dimension exists in the dataFrame.
-      boolean hasDimension = e.getValue().hasDimension(e.getKey());
-      if (hasDimension){
-        //noop
+      if (e.getKey()!=KEY_US_BEADS && e.getKey()!=KEY_US_CELLS){
+        //Check to see that the dimension exists in the dataFrame.
+        boolean hasDimension = e.getValue().hasDimension(e.getKey());
+        if (!hasDimension){
+          valid = valid&&hasDimension;
+          status.add("Missing dimension: " + e.getKey() + " in " + e.getValue().getDisplayName());
+        }
+        //Check that each file is used only once. 
+        for (Entry<String, FCSFrame> e2: dataSet2.entrySet()){
+          if (e2.getKey()!=KEY_US_BEADS && e2.getKey()!=KEY_US_CELLS){
+            String e1k = e.getKey();
+            String e2k = e2.getKey();
+            FCSFrame e1v = e.getValue();
+            FCSFrame e2v = e2.getValue();
+            boolean equalValues = e2v.equals(e1v);
+            boolean equalKeys = e1k.equals(e2k);
+            if (equalValues&&(!equalKeys)){
+                valid = false;
+                status.add("Duplicate entries for: " + e.getKey() + " and: " + e2.getKey() + "->" + e2.getValue().getDisplayName());
+            }
+          }
+        } 
       } else {
-        valid = valid&&hasDimension;
-        status.add("Missing dimension: " + e.getKey() + " in " + e.getValue().getDisplayName());
-      }
-      //Check that each file is used only once. 
-      for (Entry<String, FCSFrame> e2: dataSet2.entrySet()){
-        String e1k = e.getKey();
-        String e2k = e2.getKey();
-        FCSFrame e1v = e.getValue();
-        FCSFrame e2v = e2.getValue();
-        boolean equalValues = e2v.equals(e1v);
-        boolean equalKeys = e1k.equals(e2k);
-        if (equalValues&&(!equalKeys)){
-            valid = false;
-            status.add("Duplicate entries for: " + e.getKey() + " and: " + e2.getKey() + "->" + e2.getValue().getDisplayName());
+        if (e.getValue()==null){
+          valid = false;
+          status.add("Missing file for: " + e.getKey() + ". please remove or select the file from the list.");
         }
       }
     }
@@ -131,10 +143,17 @@ public class TheilSenMatrixCalculator {
 
   private Map<String, FCSFrame> initializeDataSet(List<String> fluorescentDims, List<FCSFrame> dataList){
     HashMap<String,FCSFrame> compMap = new HashMap<>();
-    for (String s:fluorescentDims){
-      FCSFrame matchingFrame = findCompDimension(s, dataList);
-      compMap.put(s, matchingFrame);
+    for (String shortName:fluorescentDims){
+      FCSFrame matchingFrame = findCompDimension(shortName, dataList);
+      compMap.put(shortName, matchingFrame);
+      particleTypeMap.put(shortName, DEFAULT_PARTICLE_TYPE);
     }
+    
+    compMap.put(KEY_US_BEADS, null);
+    particleTypeMap.put(KEY_US_BEADS, ParticleType.BEADS);
+    compMap.put(KEY_US_CELLS, null);
+    particleTypeMap.put(KEY_US_CELLS, ParticleType.CELLS);
+
     return compMap;   
   }
   
@@ -150,8 +169,7 @@ public class TheilSenMatrixCalculator {
     for (FCSFrame frame: dataList){
       FCSDimension dimension = FCSUtilities.findCompatibleDimension(frame, shortName);
       if (dimension!=null){
-        StatSpec spec = new StatSpec(shortName, null, StatType.MEDIAN, null);
-        Double value = spec.evaluate(frame);
+        Double value = new Median().evaluate(dimension.getData());
         if (value > maxMedian){
           maxMedian = value;
           brightestFrame = frame;
@@ -163,7 +181,6 @@ public class TheilSenMatrixCalculator {
     }
     return brightestFrame;
   }
-
   
   public boolean isValid(){
     return isValid;
@@ -181,6 +198,7 @@ public class TheilSenMatrixCalculator {
     dataMap.remove(shorName);
     inDimensions.remove(shorName);
     outDimensions.remove(shorName);
+    particleTypeMap.remove(shorName);
     isValid = validate();
   }
   
@@ -189,46 +207,52 @@ public class TheilSenMatrixCalculator {
     Optional<FCSFrame> newFrame = dataList.stream().filter(frame -> frame.getDisplayName().equals(newValue)).findAny();
     if (newFrame.isPresent()){
       dataMap.put(shortName, newFrame.get());
+      particleTypeMap.put(shortName, DEFAULT_PARTICLE_TYPE);
     } else {
       LOGGER.log(Level.FINE, newValue + ": not found in loaded data.");
     }
     isValid = validate();
   }
 
-  public double[][] calculate() throws CanceledExecutionException {
+  public double[][][] calculate() throws CanceledExecutionException {
     if (isValid){
       double[][] mtx = new double[outDimensions.size()][inDimensions.size()];
+      double[][] ssm = new double[outDimensions.size()][inDimensions.size()];
       for (int i=0;i<outDimensions.size();i++){
         if (exec!=null){
           exec.checkCanceled();
           exec.setMessage("Processing: " + outDimensions.get(i) + " -> " + dataMap.get(outDimensions.get(i)).getDisplayName());
           exec.setProgress((double)i/outDimensions.size());
         }
-        mtx[i] = estimateSpillovers(outDimensions.get(i), inDimensions, dataMap.get(outDimensions.get(i)));
+        mtx[i] = estimateSpillovers(outDimensions.get(i), inDimensions, dataMap.get(outDimensions.get(i)))[0];
+        ssm[i] = estimateSpillovers(outDimensions.get(i), inDimensions, dataMap.get(outDimensions.get(i)))[1];
       }
-      return mtx;
+      return new double[][][]{mtx, ssm};
     } else {
       throw new IllegalAccessError("Matrix may not be calculated until isValid() returns true.");
     }
   }
 
-  private double[] estimateSpillovers(String primaryName, ArrayList<String> inDims, FCSFrame fcsFrame) {
-    double[] spills = new double[inDims.size()];
-    
+  private double[][] estimateSpillovers(String primaryName, ArrayList<String> secondaryDims, FCSFrame fcsFrame) {
+    double[] spills = new double[secondaryDims.size()];
+    double[] ssms = new double[secondaryDims.size()];
+
     BitSet[] sampleMasks = downsample(fcsFrame, primaryName);
     
     FCSFrame lowFrame = FCSUtilities.filterColumnStore(sampleMasks[0], fcsFrame);
     FCSFrame highFrame = FCSUtilities.filterColumnStore(sampleMasks[1], fcsFrame);
 
-    for (int i=0;i<inDims.size();i++){
-      String secondaryFrame = inDims.get(i);
+    for (int i=0;i<secondaryDims.size();i++){
+      String secondaryFrame = secondaryDims.get(i);
       double[] x1 = lowFrame.getDimension(primaryName).getData();
       double[] x2 = highFrame.getDimension(primaryName).getData();
       double[] y1 = lowFrame.getDimension(secondaryFrame).getData();
       double[] y2 = highFrame.getDimension(secondaryFrame).getData();
-      spills[i] = TheilSenEstimator.evaluate2(primaryName, secondaryFrame, x1, x2, y1, y2);
+      double[] spilloverAndSSM =  TheilSenEstimator.evaluateHiLo(x1, x2, y1, y2);
+      spills[i] = spilloverAndSSM[0];
+      ssms[i] = spilloverAndSSM[1];
     }
-    return spills;
+    return new double[][]{spills, ssms};
   }
 
   private BitSet[] downsample(FCSFrame fcsFrame, String shortName) {
@@ -315,5 +339,13 @@ public class TheilSenMatrixCalculator {
 
   public void setContext(ExecutionContext exec) {
     this.exec = exec;
+  }
+  
+  public Map<String, ParticleType> getParticleTypeMap(){
+    return particleTypeMap;
+  }
+
+  public ParticleType getParticleType(String key) {
+    return particleTypeMap.get(key);
   }
 }

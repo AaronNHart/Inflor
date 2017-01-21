@@ -25,7 +25,7 @@ import main.java.inflor.core.data.FCSFrame;
 import main.java.inflor.core.singlets.SingletsModel;
 import main.java.inflor.core.utils.FCSUtilities;
 import main.java.inflor.knime.data.type.cell.fcs.FCSFrameFileStoreDataCell;
-import main.java.inflor.knime.nodes.fcs.read.ReadFCSSetNodeModel;
+import main.java.inflor.knime.nodes.fcs.read.set.ReadFCSSetNodeModel;
 
 /**
  * This is the model implementation of RemoveDoublets.

@@ -24,7 +24,7 @@ public class DownsampleNodeDialog extends DefaultNodeSettingsPane {
     super();
 
     final SettingsModelInteger m_Size =
-        new SettingsModelInteger(DownsampleNodeModel.CFGKEY_Size, DownsampleNodeModel.DEFAULT_Size);
+        new SettingsModelInteger(DownsampleNodeModel.KEY_SIZE, DownsampleNodeModel.DEFAULT_SIZE);
 
     addDialogComponent(new DialogComponentNumber(m_Size, "Sample Size", 1));
   }
